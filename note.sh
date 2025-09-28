@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
 fatal() {
-  echo "[FATAL] $@
+  echo "[FATAL] $@"
   exit 1
 }
 
 cleanup(){
   true
+}
+
+init() {
+  TEXT_COLOR='\033[0m'
 }
 
 print_help() {
@@ -41,13 +45,14 @@ list_notes() {
   if [[ ! -d "$NOTES_DIR" ]] || [[ -z "$(ls -A "$NOTES_DIR")" ]]; then
     echo "No Notes"
   fi
-
+  
   for file in "$NOTES_DIR"/*; do
-    echo ">>> "$(basename "$file")" <<<"
+    echo "=== $(basename "$file") ==="
     for line in "$(cat "$file")"; do
-      echo "$line" | nl
+      echo -e "$line" | nl
     done
   done
+  exit 1
 }
 
 set_debug_mode() {
@@ -55,6 +60,10 @@ set_debug_mode() {
   echo "All notes will be saved in /tmp/notes"
   DEBUG=1
   set_notes_dir "/tmp/notes"
+}
+
+set_important() {
+  TEXT_COLOR='\033[0;31m'
 }
 
 delete_note() {
@@ -80,16 +89,21 @@ delete_note() {
 
   sed -i "${line}d" "NOTES_DIR/$file"
   echo "Item $line in $file deleted"
+  exit 1
 }
 
+init
+set_notes_dir
+
 # Parse flags
-while getopts "hf:ld" opt; do
+while getopts "hf:ldi" opt; do
   case $opt in
     h) print_help ;;
     f) set_file $OPTARG ;;
-    l) list_notes ;;
-    d) set_debug_mode ;;
-    *) print_help ;;
+    l) DO_LIST=1 ;;
+    d) DEBUG=1 ;;
+    i) IMPORTANT=1 ;;
+    #*) print_help ;;
   esac
 done
 
@@ -98,22 +112,36 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
+if [ $DEBUG -eq 1 ]; then
+  set_debug_mode
+fi
+
+if [[ ! -z $DO_LIST && $DO_LIST -eq 1 ]]; then
+  list_notes
+fi
+
+if [[ ! -z $IMPORTANT && $IMPORTANT -eq 1 ]]; then
+  set_important
+fi
+
+
 shift $((OPTIND-1))
 
 cmd="$1"
 case "$cmd" in
-  delete) delete_note $2 $3
+  --delete) echo "TEST" #delete_note $2 $3
 esac
 
 if [ -z $file ]; then
-  set_file $1
+  set_file
 fi
 
 if [ -z $NOTES_DIR ]; then
   set_notes_dir
 fi
 
+#### MAIN
 if [ $# -ne 0 ]; then
-  echo "$(date '+%Y-%m-%d %H:%M:%S') — $*" >> "$NOTES_DIR/$file"
+  echo -e "$TEXT_COLOR$(date '+%Y-%m-%d %H:%M:%S') — $*\033[0m" >> "$NOTES_DIR/$file"
 fi
 

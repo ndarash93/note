@@ -165,7 +165,7 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-if [ $DEBUG -eq 1 ]; then
+if [[ -n $DUBUG && $DEBUG -eq 1 ]]; then
   set_debug_mode
 fi
 

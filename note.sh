@@ -1,5 +1,29 @@
 #!/usr/bin/env bash
 
+
+# Constants
+RED=$'\033[0;31m'
+IMPORTANT=0
+
+# Colors
+Black=$'\033[0;30m'
+Dark_Gray=$'\033[1;30m'
+Red=$'\033[0;31m'
+Light_Red=$'\033[1;31m'
+Green=$'\033[0;32m'
+Light_Green=$'\033[1;32m'
+Orange=$'\033[0;33m'
+Yellow=$'\033[1;33m'
+Blue=$'\033[0;34m'
+Light_Blue=$'\033[1;34m'
+Purple=$'\033[0;35m'
+Light_Purple=$'\033[1;35m'
+Cyan=$'\033[0;36m'
+Light_Cyan=$'\033[1;36m'
+Light_Gray=$'\033[0;37m'
+White=$'\033[1;37m'
+No_Color=$'\033[0m'
+
 fatal() {
   echo "[FATAL] $@"
   exit 1
@@ -46,11 +70,18 @@ list_notes() {
     echo "No Notes"
   fi
   
+  local line_num=1
+
   for file in "$NOTES_DIR"/*; do
     echo "=== $(basename "$file") ==="
-    for line in "$(cat "$file")"; do
-      echo -e "$line" | nl
-    done
+    while IFS= read -r line; do
+      if [[ $IMPORTANT -eq 1 && $line == *"$RED"* ]]; then
+        echo -e "\t$line_num\t$line"
+      elif [[ $IMPORTANT -ne 1 ]]; then
+        echo -e "\t$line_num\t$line"
+      fi
+      ((line_num++))
+    done < $file
   done
   exit 1
 }
@@ -63,32 +94,47 @@ set_debug_mode() {
 }
 
 set_important() {
-  TEXT_COLOR='\033[0;31m'
+  TEXT_COLOR=$RED
 }
 
-delete_note() {
-  local file=$1
-  local line=$2
+set_color() {
+  case $1 in 
+    black) TEXT_COLOR=$Black ;;
+    red) TEXT_COLOR=$Red ;;
+    yellow) TEXT_COLOR=$Yellow ;;
+    green) TEXT_COLOR=$Green ;;
+    blue) TEXT_COLOR=$Blue ;;
+    cyan) TEXT_COLOR=$Cyan ;;
+    orange) TEXT_COLOR=$Orange ;;
+    *) TEXT_COLOR=$No_Color ;;
+  esac
+}
 
-  if [[ $1 == "*.note" ]]; then
-    echo "File $file"
+remove_note() {
+  if [[ $1 =~ ^.*\.note$ ]]; then
+    local file=$1
   else
     local file="$1.note"
-    echo "File $file"
+  fi
+
+  if [[ $2 =~ ^[0-9]+$ ]]; then 
+    local line=$2
+  else 
+    fatal "Invalid note number"
   fi
 
   if [[ ! -f "$NOTES_DIR/$file" ]]; then
-    echo "File "$file" not found"
-    return 1
+    fatal "File $NOTES_DIR/$file not found"
   fi
 
-  if [[ -z "$line" || ! "$line" =~ ^[0-9]+$ ]]; then
-    echo "Invalid line number $line"
-    return 1
+  local line_count=$(wc -l < $NOTES_DIR/$file)
+  if [[ -z "$line" || ! "$line" =~ ^[0-9]+$ || $line -gt $line_count ]]; then
+    fatal Invalid line number $line
   fi
 
-  sed -i "${line}d" "NOTES_DIR/$file"
-  echo "Item $line in $file deleted"
+
+  sed -i '' "${line}d" $NOTES_DIR/$file
+  echo "Item $line in $NOTES_DIR/$file deleted"
   exit 1
 }
 
@@ -96,13 +142,20 @@ init
 set_notes_dir
 
 # Parse flags
-while getopts "hf:ldi" opt; do
+while getopts "hf:ldir:c:" opt; do
   case $opt in
     h) print_help ;;
     f) set_file $OPTARG ;;
     l) DO_LIST=1 ;;
     d) DEBUG=1 ;;
     i) IMPORTANT=1 ;;
+    r) 
+      file=$OPTARG
+      note_num=${!OPTIND}
+      ((OPTIND++))
+      REMOVE=1
+      ;;
+    c) set_color $OPTARG ;;
     #*) print_help ;;
   esac
 done
@@ -124,6 +177,10 @@ if [[ ! -z $IMPORTANT && $IMPORTANT -eq 1 ]]; then
   set_important
 fi
 
+if [[ ! -z $REMOVE && $REMOVE -eq 1 ]]; then
+  remove_note $file $note_num
+fi
+
 
 shift $((OPTIND-1))
 
@@ -142,6 +199,6 @@ fi
 
 #### MAIN
 if [ $# -ne 0 ]; then
-  echo -e "$TEXT_COLOR$(date '+%Y-%m-%d %H:%M:%S') — $*\033[0m" >> "$NOTES_DIR/$file"
+  echo -e "$TEXT_COLOR$(date '+%Y-%m-%d %H:%M:%S') — $*$No_Color" >> "$NOTES_DIR/$file"
 fi
 

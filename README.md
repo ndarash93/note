@@ -14,19 +14,19 @@ cd note.sh
 ./install.sh
 ```
 
-## Usage
+## 📝 Usage
 
-### 📝 Take a quick note
+### Take a quick note
 ```
 note This is a quick note
 ```
 
-### 📝 Separate notes into file
+### Separate notes into file
 ```
 note -f <filename> <note>
 ```
 
-### 📝 List notes
+### List notes
 ```
 note -l
 ```

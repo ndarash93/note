@@ -68,6 +68,7 @@ set_file() {
 list_notes() {
   if [[ ! -d "$NOTES_DIR" ]] || [[ -z "$(ls -A "$NOTES_DIR")" ]]; then
     echo "No Notes"
+    exit 1
   fi
   
   local line_num=1
@@ -156,7 +157,6 @@ while getopts "hf:ldir:c:" opt; do
       REMOVE=1
       ;;
     c) set_color $OPTARG ;;
-    #*) print_help ;;
   esac
 done
 
@@ -165,7 +165,7 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-if [[ -n $DUBUG && $DEBUG -eq 1 ]]; then
+if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
   set_debug_mode
 fi
 
